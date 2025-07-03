@@ -34,8 +34,8 @@ public class Calculator {
                 }
 
                 if (isPow) {
-                    if ((i-1 >= 0 && excerpt.charAt(i-1) != '(') || i == 0) {
-                        newStr.append(excerpt.charAt(i));
+                    newStr.append(excerpt.charAt(i));
+                    if ((i-1 >= 0 && i+1 < excerpt.length() && excerpt.charAt(i-1) != '(' && excerpt.charAt(i+1) != '(') || i == 0) {
                         newStr.append('(');
                     }
                 } else if (i != 0 && excerpt.charAt(i-1) == '(') {
@@ -76,6 +76,17 @@ public class Calculator {
         return newStr.toString();
     }
 
+    private ArrayList<Object> mathOperation(ArrayList<Object> term) {
+
+        ArrayList<Object> newTerm = new ArrayList<>();
+
+        return newTerm;
+    }
+
+    private boolean isMathOperation(String str) {
+        return str.contains("log") || str.contains("log10") || str.contains("sin") || str.contains("cos") || str.contains("sqrt");
+    }
+
     private ArrayList<Object> tokenises(String excerpt) {
         if ((excerpt.contains("(") && !excerpt.contains(")")) || (!excerpt.contains("(") && excerpt.contains(")")))
             throw new IllegalArgumentException("Invalid format");
@@ -102,11 +113,21 @@ public class Calculator {
             }
 
             String endExcerpt = " " + excerpt.substring(indexLast + 1);
+            int step = 2;
+
+            for (int i = indexFirst; i >= 0; i--) {
+                if (excerpt.charAt(i) == ' ') {
+                    step = i + 1;
+                    break;
+                } else if (excerpt.charAt(i) == '(') {
+                    break;
+                }
+            }
 
             if (indexFirst - 2 >= 0 && result < 0) {
-                excerpt = (switch (excerpt.charAt(indexFirst - 2)) {
-                    case '+' -> excerpt.substring(0, indexFirst - 2) + result + endExcerpt;
-                    case '-' -> excerpt.substring(0, indexFirst - 2) + (result * -1.0) + endExcerpt;
+                excerpt = (switch (excerpt.charAt(indexFirst - step)) {
+                    case '+' -> excerpt.substring(0, indexFirst - step) + result + endExcerpt;
+                    case '-' -> excerpt.substring(0, indexFirst - step) + (result * -1.0) + endExcerpt;
                     default -> excerpt.substring(0, indexFirst - 1) + result + endExcerpt;
                 }).trim();
             }
@@ -163,14 +184,14 @@ public class Calculator {
 
     private ArrayList<Object> topOperator(ArrayList<Object> term) {
 
-        term = raisingToPower(term);
+        ArrayList<Object> changedTerm = raisingToPower(term);
 
         ArrayList<Object> newTerm = new ArrayList<>();
-        for(int i = 0; i < term.size(); i++){
-            Object current = term.get(i);
+        for(int i = 0; i < changedTerm.size(); i++){
+            Object current = changedTerm.get(i);
             if (current instanceof String op && (op.equals("*") || op.equals("/"))) {
-                double left = (double) newTerm.remove(newTerm.size()-1);
-                double right = (double) term.get(++i);
+                double left = (double) newTerm.removeLast();
+                double right = (double) changedTerm.get(++i);
                 double res = applyOperator(op, left, right);
 
                 newTerm.add(res);
@@ -212,6 +233,17 @@ public class Calculator {
         }
 
         return result;
+    }
+
+    private double applyMathOperator(String op, double number) {
+        return switch (op) {
+            case "log" -> Math.log(number);
+            case "log10" -> Math.log10(number);
+            case "cos" -> Math.cos(number);
+            case "sin" -> Math.sin(number);
+            case "sqrt" -> Math.sqrt(number);
+            default -> throw new IllegalArgumentException("Invalid operator! " + op);
+        };
     }
 
     private double applyOperator(String op, double firstNumber, double secondNumber) {
