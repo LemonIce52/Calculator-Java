@@ -4,7 +4,7 @@ import java.util.Arrays;
 public class Calculator {
 
     public Double input(String excerpt) {
-        excerpt = excerpt.trim();
+        excerpt = excerpt.trim().toLowerCase();
         excerpt = normalizeUnaryMinusInPowers(excerpt);
         ArrayList<Object> term = tokenises(excerpt);
         term = convertObjects(term);
@@ -22,23 +22,23 @@ public class Calculator {
         StringBuilder newStr = new StringBuilder();
 
         for (int i = 0; i < excerpt.length(); i++) {
-            if (i+1 < excerpt.length() && excerpt.charAt(i) == '-' && excerpt.charAt(i + 1) != ' ') {
+            if (i + 1 < excerpt.length() && excerpt.charAt(i) == '-' && excerpt.charAt(i + 1) != ' ') {
 
-                for (int j = i; j < excerpt.length(); j++){
-                    if (excerpt.charAt(j) == ' ' && excerpt.charAt(j+1) == '^') {
+                for (int j = i; j < excerpt.length(); j++) {
+                    if (excerpt.charAt(j) == ' ' && excerpt.charAt(j + 1) == '^') {
                         isPow = true;
                         break;
-                    } else if (excerpt.charAt(j) == ' ' && excerpt.charAt(j+1) != '^') {
+                    } else if (excerpt.charAt(j) == ' ' && excerpt.charAt(j + 1) != '^') {
                         break;
                     }
                 }
 
                 if (isPow) {
                     newStr.append(excerpt.charAt(i));
-                    if ((i-1 >= 0 && i+1 < excerpt.length() && excerpt.charAt(i-1) != '(' && excerpt.charAt(i+1) != '(') || i == 0) {
+                    if ((i - 1 >= 0 && i + 1 < excerpt.length() && excerpt.charAt(i - 1) != '(' && excerpt.charAt(i + 1) != '(') || i == 0) {
                         newStr.append('(');
                     }
-                } else if (i != 0 && excerpt.charAt(i-1) == '(') {
+                } else if (i != 0 && excerpt.charAt(i - 1) == '(') {
                     newStr.append(excerpt.charAt(i));
                 } else {
                     newStr.append(excerpt.charAt(i));
@@ -46,7 +46,7 @@ public class Calculator {
             } else {
                 if (isPow) {
                     for (int j = i; j < excerpt.length(); j++) {
-                        if ((excerpt.charAt(j) == ' ' && isOperator(excerpt.charAt(j+1)) && excerpt.charAt(j+2) == ' ')){
+                        if ((excerpt.charAt(j) == ' ' && isOperator(excerpt.charAt(j + 1)) && excerpt.charAt(j + 2) == ' ')) {
                             i = j;
                             isPow = false;
                             newStr.append(')');
@@ -54,10 +54,22 @@ public class Calculator {
                             break;
                         } else if (excerpt.charAt(j) == ')') {
                             i = j;
-                            isPow = false;
                             newStr.append(excerpt.charAt(j));
+
+                            int openBracket = 0;
+                            int closeBracket = 0;
+
+                            for (int k = 0; k < newStr.length(); k++) {
+                                char current = newStr.charAt(k);
+                                if (current == '(')
+                                    openBracket++;
+                                else if (current == ')')
+                                    closeBracket++;
+                            }
+
+                            isPow = !(openBracket == closeBracket);
                             break;
-                        } else if (j == excerpt.length() - 1 ) {
+                        } else if (j == excerpt.length() - 1) {
                             i = j;
                             isPow = false;
                             newStr.append(excerpt.charAt(j));
@@ -72,30 +84,109 @@ public class Calculator {
         }
 
 
-
         return newStr.toString();
     }
 
-    private ArrayList<Object> mathOperation(ArrayList<Object> term) {
-
-        ArrayList<Object> newTerm = new ArrayList<>();
-
-        return newTerm;
-    }
-
     private boolean isMathOperation(String str) {
-        return str.contains("log") || str.contains("log10") || str.contains("sin") || str.contains("cos") || str.contains("sqrt");
+        return str.contains("log") || str.contains("log10") || str.contains("sin") || str.contains("cos")
+                || str.contains("sqrt") || str.contains("abs") || str.contains("floor") || str.contains("ceil")
+                || str.contains("exp") || str.contains("tan");
     }
 
     private ArrayList<Object> tokenises(String excerpt) {
         if ((excerpt.contains("(") && !excerpt.contains(")")) || (!excerpt.contains("(") && excerpt.contains(")")))
             throw new IllegalArgumentException("Invalid format");
 
+        excerpt = convertMathConstant(excerpt);
+        excerpt = mathOperation(excerpt);
+        excerpt = openBrackets(excerpt);
+
+        return new ArrayList<>(Arrays.asList(excerpt.split("\\s+")));
+    }
+
+    private String mathOperation(String excerpt) {
+
+        while (isMathOperation(excerpt)) {
+            int indexFirst = -1;
+            int openBracket = -1;
+            int closeBrackets = -1;
+            int step = 0;
+
+            for (int i = 0; i < excerpt.length(); i++) {
+                char current = excerpt.charAt(i);
+                if (current == 'l' || current == 's' || current == 'c' || current == 'a'
+                        || current == 't' || current == 'e' || current == 'f') {
+                    indexFirst = i;
+                    break;
+                }
+            }
+
+            for (int i = indexFirst; i < excerpt.length(); i++) {
+                char current = excerpt.charAt(i);
+                if (current == '(') {
+                    openBracket = i;
+                    for (int j = openBracket + 1; j < excerpt.length(); j++) {
+                        char currentReverse = excerpt.charAt(j);
+                        if (currentReverse == '(') {
+                            step++;
+                        } else if (currentReverse == ')') {
+                            if (step > 0)
+                                step--;
+                            else {
+                                closeBrackets = j;
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+
+            String operation = excerpt.substring(indexFirst, openBracket);
+            double number;
+            try {
+                number = Double.parseDouble(excerpt.substring(openBracket + 1, closeBrackets));
+            } catch (NumberFormatException e) {
+                number = input(excerpt.substring(openBracket + 1, closeBrackets));
+            }
+
+            if (number < 0 && !operation.equals("abs"))
+                throw new IllegalArgumentException("Math method does not supported number less that zero!");
+
+            double result = applyMathOperator(operation, number);
+
+            excerpt = excerpt.substring(0, indexFirst) + result + excerpt.substring(closeBrackets + 1);
+        }
+
+        return excerpt;
+    }
+
+    private String convertMathConstant(String excerpt) {
+        if (excerpt.contains("pi")) {
+            int index = excerpt.indexOf("pi");
+            if (index + 2 >= excerpt.length() || excerpt.charAt(index + 2) == ' ' || excerpt.charAt(index + 2) == ')') {
+                excerpt = excerpt.substring(0, index) + Math.PI + excerpt.substring(index + 2);
+            } else
+                throw new IllegalArgumentException("Does not math constant!");
+
+        } else if (excerpt.contains("e")) {
+            int index = excerpt.indexOf("e");
+            if (index + 1 >= excerpt.length() || excerpt.charAt(index + 1) == ' ' || excerpt.charAt(index + 1) == ')') {
+                excerpt = excerpt.substring(0, index) + Math.E + excerpt.substring(index + 1);
+            } else
+                throw new IllegalArgumentException("Does not math constant!");
+        }
+
+        return excerpt;
+    }
+
+    private String openBrackets(String excerpt) {
+
         while (excerpt.contains("(") && excerpt.contains(")")) {
             int indexFirst = excerpt.indexOf('(') + 1;
             int indexLast = 0;
 
-            for (int i = indexFirst; i < excerpt.length(); i++){
+            for (int i = indexFirst; i < excerpt.length(); i++) {
                 if (excerpt.charAt(i) == '(')
                     indexFirst = i + 1;
                 if (excerpt.charAt(i) == ')') {
@@ -130,16 +221,15 @@ public class Calculator {
                     case '-' -> excerpt.substring(0, indexFirst - step) + (result * -1.0) + endExcerpt;
                     default -> excerpt.substring(0, indexFirst - 1) + result + endExcerpt;
                 }).trim();
-            }
-            else
+            } else
                 excerpt = (excerpt.substring(0, indexFirst - 1) + result + endExcerpt).trim();
         }
 
-        return new ArrayList<>(Arrays.asList(excerpt.split("\\s+")));
+        return excerpt;
     }
 
     private ArrayList<Object> convertObjects(ArrayList<Object> term) {
-        ArrayList <Object> newTerm = new ArrayList<>();
+        ArrayList<Object> newTerm = new ArrayList<>();
         for (Object object : term) {
             if (object instanceof String str) {
                 try {
@@ -163,7 +253,7 @@ public class Calculator {
             Object current = term.get(i);
             Object previous = i > 0 ? term.get(i - 1) : null;
 
-            if (current instanceof String op){
+            if (current instanceof String op) {
                 if (!isOperator(op) || previous instanceof String)
                     return false;
             } else if (current instanceof Double && previous instanceof Double) {
@@ -187,7 +277,7 @@ public class Calculator {
         ArrayList<Object> changedTerm = raisingToPower(term);
 
         ArrayList<Object> newTerm = new ArrayList<>();
-        for(int i = 0; i < changedTerm.size(); i++){
+        for (int i = 0; i < changedTerm.size(); i++) {
             Object current = changedTerm.get(i);
             if (current instanceof String op && (op.equals("*") || op.equals("/"))) {
                 double left = (double) newTerm.removeLast();
@@ -203,16 +293,16 @@ public class Calculator {
         return newTerm;
     }
 
-    private ArrayList<Object> raisingToPower(ArrayList<Object> term){
+    private ArrayList<Object> raisingToPower(ArrayList<Object> term) {
 
-        for (int i = term.size() - 1; i >= 0; i--){
-            if (term.get(i) instanceof String op && op.equals("^")){
+        for (int i = term.size() - 1; i >= 0; i--) {
+            if (term.get(i) instanceof String op && op.equals("^")) {
                 double left = (double) term.get(i - 1);
                 double right = (double) term.get(i + 1);
                 double result = applyOperator("^", left, right);
 
-                term.set(i-1, result);
-                term.remove(i+1);
+                term.set(i - 1, result);
+                term.remove(i + 1);
                 term.remove(i);
             }
         }
@@ -226,7 +316,7 @@ public class Calculator {
 
         double result = Double.parseDouble(String.valueOf(term.getFirst()));
 
-        for (int i = 1; i < term.size(); i += 2){
+        for (int i = 1; i < term.size(); i += 2) {
             if (term.get(i) instanceof String) {
                 result = applyOperator((String) term.get(i), result, (double) term.get(i + 1));
             }
@@ -242,6 +332,11 @@ public class Calculator {
             case "cos" -> Math.cos(number);
             case "sin" -> Math.sin(number);
             case "sqrt" -> Math.sqrt(number);
+            case "abs" -> Math.abs(number);
+            case "tan" -> Math.tan(number);
+            case "exp" -> Math.exp(number);
+            case "floor" -> Math.floor(number);
+            case "ceil" -> Math.ceil(number);
             default -> throw new IllegalArgumentException("Invalid operator! " + op);
         };
     }
