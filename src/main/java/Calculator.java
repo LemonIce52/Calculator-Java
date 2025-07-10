@@ -5,6 +5,10 @@ public class Calculator implements ICalculate {
 
     @Override
     public Double input(String excerpt) {
+        if (excerpt.isEmpty() || excerpt.equals(" "))
+            throw new IllegalArgumentException("Invalid format excerpt!");
+
+
         excerpt = excerpt.trim().toLowerCase();
         excerpt = normalizeUnaryMinusInPowers(excerpt);
         ArrayList<Object> term = tokenises(excerpt);
@@ -19,87 +23,50 @@ public class Calculator implements ICalculate {
     }
 
     private String normalizeUnaryMinusInPowers(String excerpt) {
-        boolean isPow = false;
-        StringBuilder newStr = new StringBuilder();
+        String[] tokens = excerpt.split("\\s+");
+        StringBuilder result = new StringBuilder();
+        boolean isPower = false;
 
-        for (int i = 0; i < excerpt.length(); i++) {
-            if (i + 1 < excerpt.length() && excerpt.charAt(i) == '-' && excerpt.charAt(i + 1) != ' ') {
+        for (int i = 0; i < tokens.length; i++) {
+            String token = tokens[i];
 
-                for (int j = i; j < excerpt.length(); j++) {
-                    if (excerpt.charAt(j) == ' ' && excerpt.charAt(j + 1) == '^') {
-                        isPow = true;
-                        break;
-                    } else if (excerpt.charAt(j) == ' ' && excerpt.charAt(j + 1) != '^') {
-                        break;
-                    }
-                }
-
-                if (isPow) {
-                    newStr.append(excerpt.charAt(i));
-                    if ((i - 1 >= 0 && i + 1 < excerpt.length() && excerpt.charAt(i - 1) != '(' && excerpt.charAt(i + 1) != '(') || i == 0) {
-                        newStr.append('(');
-                    }
-                } else if (i != 0 && excerpt.charAt(i - 1) == '(') {
-                    newStr.append(excerpt.charAt(i));
-                } else {
-                    newStr.append(excerpt.charAt(i));
-                }
+            if (isUnaryMinus(token) && i+1 < tokens.length && tokens[i+1].equals("^")) {
+                result.append("-(").append(token.substring(1)).append(" ");
+                isPower = true;
+            } else if (isNumeric(token) && i-1 >= 0 && tokens[i-1].equals("^")) {
+                if (isPower && i+2 < tokens.length && !tokens[i+2].equals("^"))
+                    result.append(token).append(")").append(" ");
+                else if (i == tokens.length - 1 && isPower)
+                    result.append(token).append(")");
+                else
+                    result.append(token).append(" ");
             } else {
-                if (isPow) {
-                    for (int j = i; j < excerpt.length(); j++) {
-                        if ((excerpt.charAt(j) == ' ' && isOperator(excerpt.charAt(j + 1)) && excerpt.charAt(j + 2) == ' ')) {
-                            i = j;
-                            isPow = false;
-                            newStr.append(')');
-                            newStr.append(excerpt.charAt(j));
-                            break;
-                        } else if (excerpt.charAt(j) == ')') {
-                            i = j;
-                            newStr.append(excerpt.charAt(j));
-
-                            int openBracket = 0;
-                            int closeBracket = 0;
-
-                            for (int k = 0; k < newStr.length(); k++) {
-                                char current = newStr.charAt(k);
-                                if (current == '(')
-                                    openBracket++;
-                                else if (current == ')')
-                                    closeBracket++;
-                            }
-
-                            isPow = !(openBracket == closeBracket);
-                            break;
-                        } else if (j == excerpt.length() - 1) {
-                            i = j;
-                            isPow = false;
-                            newStr.append(excerpt.charAt(j));
-                            newStr.append(')');
-                            break;
-                        } else
-                            newStr.append(excerpt.charAt(j));
-                    }
-                } else
-                    newStr.append(excerpt.charAt(i));
+                result.append(token).append(" ");
             }
         }
 
-
-        return newStr.toString();
+        return result.toString().trim();
     }
 
-    private boolean isMathOperation(String str) {
-        return str.contains("log(") || str.contains("log10(") || str.contains("sin(") || str.contains("cos(")
-                || str.contains("sqrt(") || str.contains("abs(") || str.contains("floor(") || str.contains("ceil(")
-                || str.contains("exp(") || str.contains("tan(");
+    private boolean isUnaryMinus(String token) {
+        return token.charAt(0) != '(' && token.charAt(0) == '-' && 1 < token.length() && token.charAt(1) != '(';
+    }
+
+    private boolean isNumeric(String str) {
+        try {
+            Double.parseDouble(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private ArrayList<Object> tokenises(String excerpt) {
         if ((excerpt.contains("(") && !excerpt.contains(")")) || (!excerpt.contains("(") && excerpt.contains(")")))
             throw new IllegalArgumentException("Invalid format");
 
-        excerpt = convertMathConstant(excerpt);
         excerpt = mathOperation(excerpt);
+        excerpt = convertMathConstant(excerpt);
         excerpt = openBrackets(excerpt);
 
         return new ArrayList<>(Arrays.asList(excerpt.split("\\s+")));
@@ -144,14 +111,10 @@ public class Calculator implements ICalculate {
             }
 
             String operation = excerpt.substring(indexFirst, openBracket);
-            double number;
-            try {
-                number = Double.parseDouble(excerpt.substring(openBracket + 1, closeBrackets));
-            } catch (NumberFormatException e) {
-                number = input(excerpt.substring(openBracket + 1, closeBrackets));
-            }
+            String variables =  excerpt.substring(openBracket + 1, closeBrackets);
+            double number = convertVariables(variables);
 
-            if (number < 0 && !operation.equals("abs"))
+            if (number < 0 && (operation.equals("log") || operation.equals("log10") || operation.equals("sqrt")))
                 throw new IllegalArgumentException("Math method does not supported number less that zero!");
 
             double result = applyMathOperator(operation, number);
@@ -162,23 +125,10 @@ public class Calculator implements ICalculate {
         return excerpt;
     }
 
-    private String convertMathConstant(String excerpt) {
-        if (excerpt.contains("pi")) {
-            int index = excerpt.indexOf("pi");
-            if (index + 2 >= excerpt.length() || excerpt.charAt(index + 2) == ' ' || excerpt.charAt(index + 2) == ')') {
-                excerpt = excerpt.substring(0, index) + Math.PI + excerpt.substring(index + 2);
-            } else
-                throw new IllegalArgumentException("Does not math constant!");
-
-        } else if (excerpt.contains("e")) {
-            int index = excerpt.indexOf("e");
-            if (index + 1 >= excerpt.length() || excerpt.charAt(index + 1) == ' ' || excerpt.charAt(index + 1) == ')') {
-                excerpt = excerpt.substring(0, index) + Math.E + excerpt.substring(index + 1);
-            } else
-                throw new IllegalArgumentException("Does not math constant!");
-        }
-
-        return excerpt;
+    private boolean isMathOperation(String str) {
+        return str.contains("log(") || str.contains("log10(") || str.contains("sin(") || str.contains("cos(")
+                || str.contains("sqrt(") || str.contains("abs(") || str.contains("floor(") || str.contains("ceil(")
+                || str.contains("exp(") || str.contains("tan(");
     }
 
     private String openBrackets(String excerpt) {
@@ -197,12 +147,8 @@ public class Calculator implements ICalculate {
             }
 
             String newExcerpt = excerpt.substring(indexFirst, indexLast);
-            double result;
-            try {
-                result = Double.parseDouble(newExcerpt);
-            } catch (NumberFormatException e) {
-                result = input(newExcerpt);
-            }
+
+            double result = convertVariables(newExcerpt);
 
             String endExcerpt = " " + excerpt.substring(indexLast + 1);
             int step = 2;
@@ -227,6 +173,41 @@ public class Calculator implements ICalculate {
         }
 
         return excerpt;
+    }
+
+    private double convertVariables(String variables) {
+        double result;
+        try {
+            result = Double.parseDouble(variables);
+        } catch (NumberFormatException e) {
+            result = input(variables);
+        }
+        return result;
+    }
+
+    private String convertMathConstant(String excerpt) {
+        if (excerpt.contains("pi")) {
+            int index = excerpt.indexOf("pi");
+            if (index + 2 >= excerpt.length() || excerpt.charAt(index + 2) == ' ' || excerpt.charAt(index + 2) == ')') {
+                excerpt = excerpt.substring(0, index) + Math.PI + excerpt.substring(index + 2);
+            } else
+                throw new IllegalArgumentException("Does not math constant!");
+
+        } else if (excerpt.contains("e")) {
+            int index = excerpt.indexOf("e");
+            if (isOnlyE(index, excerpt) || excerpt.equals("e")) {
+                if (index + 1 >= excerpt.length() || excerpt.charAt(index + 1) == ' ' || excerpt.charAt(index + 1) == ')') {
+                    excerpt = excerpt.substring(0, index) + Math.E + excerpt.substring(index + 1);
+                } else
+                    throw new IllegalArgumentException("Does not math constant!");
+            }
+        }
+
+        return excerpt;
+    }
+
+    private boolean isOnlyE(int index, String excerpt) {
+        return index-1 > 0 && index+1 < excerpt.length() && excerpt.charAt(index+1) == ' ' && excerpt.charAt(index-1) == ' ';
     }
 
     private ArrayList<Object> convertObjects(ArrayList<Object> term) {

@@ -3,9 +3,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class TestCalculator {
 
+    CommandCalculator calc = new CommandCalculator();
+
     @Test
     public void testAdditionAndSubstraction(){
-        CommandCalculator calc = new CommandCalculator();
         assertEquals(5.0, calc.input("2 + 3"), 0.0001);
         assertEquals(-3.0, calc.input("0 + -3"), 0.0001);
         assertEquals(6.0, calc.input("1 + 2 + 3"), 0.0001);
@@ -24,7 +25,6 @@ public class TestCalculator {
 
     @Test
     public void testMultiplicationAndDivision(){
-        CommandCalculator calc = new CommandCalculator();
         assertEquals(6.0, calc.input("2 * 3"), 0.0001);
         assertEquals(0.0, calc.input("0 * 3"), 0.0001);
         assertEquals(6.0, calc.input("-2 * -3"), 0.0001);
@@ -46,7 +46,6 @@ public class TestCalculator {
 
     @Test
     public void testMultiOperator(){
-        CommandCalculator calc = new CommandCalculator();
         assertEquals(6.0, calc.input("3 + 1 * 3"), 0.0001);
         assertEquals(9.0, calc.input("2 * 3 + 3"), 0.0001);
         assertEquals(3.0, calc.input("9 / 9 + 2"), 0.0001);
@@ -62,7 +61,6 @@ public class TestCalculator {
 
     @Test
     public void testBrackets(){
-        CommandCalculator calc = new CommandCalculator();
         assertEquals(24.0, calc.input("(2 + 2) * (2 + (2 * 2))"));
         assertEquals(8.0, calc.input("(2 + (1 + 1)) * 2"));
         assertEquals(2.0, calc.input("(1 + 1)"));
@@ -79,14 +77,12 @@ public class TestCalculator {
 
     @Test
     public void testVoidInput(){
-        CommandCalculator calc = new CommandCalculator();
         assertThrows(IllegalArgumentException.class, () -> calc.input(""));
         assertThrows(IllegalArgumentException.class, () -> calc.input(" "));
     }
 
     @Test
     public void testBracketsSimple() {
-        CommandCalculator calc = new CommandCalculator();
         assertEquals(14.0, calc.input("2 * (3 + 4)"));
         assertEquals(45.0, calc.input("(2 + 3) * (4 + 5)"));
         assertEquals(0.0, calc.input("3 - (2 + 1)"));
@@ -94,7 +90,6 @@ public class TestCalculator {
 
     @Test
     public void testBracketsNested() {
-        CommandCalculator calc = new CommandCalculator();
         assertEquals(16.0, calc.input("2 * (3 + (2 + 3))"));
         assertEquals(7.0, calc.input("(1 + (2 + (1 + 3)))"));
         assertEquals(6.0, calc.input("((8 / 2) + (1 + 1))"));
@@ -115,7 +110,6 @@ public class TestCalculator {
 
     @Test
     public void testUnaryMinus(){
-        CommandCalculator calc = new CommandCalculator();
         assertEquals(-5.0, calc.input("-(2 + 3)"));
         assertEquals(1.0, calc.input("3 - (1 + 1)"));
         assertEquals(0.0, calc.input("-(2 + 2) + 4"));
@@ -128,7 +122,6 @@ public class TestCalculator {
 
     @Test
     public void testPow(){
-        CommandCalculator calc = new CommandCalculator();
         assertEquals(4.0, calc.input("2 ^ 2"));
         assertEquals(4.0, calc.input("(-2) ^ 2"));
         assertEquals(-4.0, calc.input("-2 ^ 2"));
@@ -137,5 +130,85 @@ public class TestCalculator {
         assertThrows(IllegalArgumentException.class, () -> calc.input("2 ^"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("2 ^^"));
     }
+
+    @Test
+    public void testSimpleAddition() {
+        assertEquals(5.0, calc.input("2 + 3"), 1e-9);
+    }
+
+    @Test
+    public void testSimpleSubtraction() {
+        assertEquals(4.0, calc.input("7 - 3"), 1e-9);
+    }
+
+    @Test
+    public void testMultiplication() {
+        assertEquals(12.0, calc.input("3 * 4"), 1e-9);
+    }
+
+    @Test
+    public void testDivision() {
+        assertEquals(2.5, calc.input("5 / 2"), 1e-9);
+    }
+
+    @Test
+    public void testPower() {
+        assertEquals(8.0, calc.input("2 ^ 3"), 1e-9);
+        assertEquals(16.0, calc.input("(-2) ^ 4"), 1e-9);
+        assertEquals(-4.0, calc.input("-2 ^ 2"), 1e-9);  // важно: унарный минус перед возведением
+    }
+
+    @Test
+    public void testFunctions() {
+        assertEquals(Math.sin(Math.PI / 2), calc.input("sin( pi / 2 )"), 1e-9);
+        assertEquals(Math.log(10), calc.input("log( 10 )"), 1e-9);
+        assertEquals(Math.sqrt(25), calc.input("sqrt( 25 )"), 1e-9);
+        assertEquals(Math.exp(1), calc.input("exp( 1 )"), 1e-9);
+    }
+
+    @Test
+    public void testComplexExpression() {
+        assertEquals(8.0, calc.input("2 + 3 * 2"), 1e-9);
+        assertEquals(10.0, calc.input("( 2 + 3 ) * 2"), 1e-9);
+    }
+
+    @Test
+    public void testNegativePowerBase() {
+        assertEquals(16.0, calc.input("(-2) ^ 4"), 1e-9);
+        assertEquals(-8.0, calc.input("-(2 ^ 3)"), 1e-9);
+    }
+
+    @Test
+    public void testScientificNotation() {
+        assertEquals(1000.0, calc.input("1e3"), 1e-9);
+        assertEquals(1.2e3, calc.input("1.2e3"), 1e-9);
+        assertEquals(1.2e-3, calc.input("1.2e-3"), 1e-9);
+    }
+
+    @Test
+    public void testExpressionWithSpaces() {
+        assertEquals(14.0, calc.input(" 2 + 3 * 4 "), 1e-9);
+        assertEquals(4.0, calc.input(" 6 - 2 "), 1e-9);
+    }
+
+    @Test
+    public void testFloorCeil() {
+        assertEquals(Math.floor(3.7), calc.input("floor( 3.7 )"), 1e-9);
+        assertEquals(Math.ceil(3.2), calc.input("ceil( 3.2 )"), 1e-9);
+    }
+
+    @Test
+    public void testConstants() {
+        assertEquals(Math.PI, calc.input("pi"), 1e-9);
+        assertEquals(Math.E, calc.input("e"), 1e-9);
+    }
+
+    // Дополнительно можешь протестировать ошибки:
+     @Test
+     public void testInvalidSyntax() {
+         assertThrows(IllegalArgumentException.class, () -> calc.input("2++2"));
+         assertThrows(IllegalArgumentException.class, () -> calc.input("5//2"));
+         assertThrows(IllegalArgumentException.class, () -> calc.input("5^^2"));
+     }
 
 }
