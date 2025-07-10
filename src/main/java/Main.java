@@ -1,8 +1,10 @@
 public class Main {
 
     public static void main(String[] args) {
-        Calculator calc = new Calculator();
+        CommandCalculator comm = new CommandCalculator();
 
-        System.out.println(calc.input("(1 + e) * 2"));
+        comm.input("log = 2 + 4");
+        comm.input("y = 1 + 1");
+        System.out.println(comm.input("2 + log10(2) * 2"));
     }
 }

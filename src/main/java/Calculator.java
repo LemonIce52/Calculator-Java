@@ -1,8 +1,9 @@
 import java.util.ArrayList;
 import java.util.Arrays;
 
-public class Calculator {
+public class Calculator implements ICalculate {
 
+    @Override
     public Double input(String excerpt) {
         excerpt = excerpt.trim().toLowerCase();
         excerpt = normalizeUnaryMinusInPowers(excerpt);
@@ -88,9 +89,9 @@ public class Calculator {
     }
 
     private boolean isMathOperation(String str) {
-        return str.contains("log") || str.contains("log10") || str.contains("sin") || str.contains("cos")
-                || str.contains("sqrt") || str.contains("abs") || str.contains("floor") || str.contains("ceil")
-                || str.contains("exp") || str.contains("tan");
+        return str.contains("log(") || str.contains("log10(") || str.contains("sin(") || str.contains("cos(")
+                || str.contains("sqrt(") || str.contains("abs(") || str.contains("floor(") || str.contains("ceil(")
+                || str.contains("exp(") || str.contains("tan(");
     }
 
     private ArrayList<Object> tokenises(String excerpt) {
@@ -229,13 +230,18 @@ public class Calculator {
     }
 
     private ArrayList<Object> convertObjects(ArrayList<Object> term) {
+        CalcVariables var = new CalcVariables();
         ArrayList<Object> newTerm = new ArrayList<>();
         for (Object object : term) {
             if (object instanceof String str) {
                 try {
                     newTerm.add(Double.parseDouble(str));
                 } catch (NumberFormatException e) {
-                    newTerm.add(object);
+                    double result = var.getVariables(str);
+                    if (Double.isNaN(result))
+                        newTerm.add(object);
+                    else
+                        newTerm.add(result);
                 }
             } else
                 newTerm.add(object);
@@ -244,7 +250,8 @@ public class Calculator {
         return newTerm;
     }
 
-    private boolean validTokens(ArrayList<Object> term) {
+    @Override
+    public boolean validTokens(ArrayList<Object> term) {
         if (term.isEmpty()) return false;
         if (term.getFirst() instanceof String || term.getLast() instanceof String) return false;
 
