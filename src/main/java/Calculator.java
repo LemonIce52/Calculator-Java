@@ -1,7 +1,12 @@
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Set;
 
 public class Calculator implements ICalculate {
+
+    private static final Set<String> SUPPORTED_FUNCTIONS = Set.of(
+            "log", "log10", "sin", "cos", "sqrt", "abs", "floor", "ceil", "exp", "tan"
+    );
 
     @Override
     public Double input(String excerpt) {
@@ -30,11 +35,11 @@ public class Calculator implements ICalculate {
         for (int i = 0; i < tokens.length; i++) {
             String token = tokens[i];
 
-            if (isUnaryMinus(token) && i+1 < tokens.length && tokens[i+1].equals("^")) {
+            if (isUnaryMinus(token) && i + 1 < tokens.length && tokens[i + 1].equals("^")) {
                 result.append("-(").append(token.substring(1)).append(" ");
                 isPower = true;
-            } else if (isNumeric(token) && i-1 >= 0 && tokens[i-1].equals("^")) {
-                if (isPower && i+2 < tokens.length && !tokens[i+2].equals("^"))
+            } else if (isNumeric(token) && i - 1 >= 0 && tokens[i - 1].equals("^")) {
+                if (isPower && i + 2 < tokens.length && !tokens[i + 2].equals("^"))
                     result.append(token).append(")").append(" ");
                 else if (i == tokens.length - 1 && isPower)
                     result.append(token).append(")");
@@ -76,42 +81,36 @@ public class Calculator implements ICalculate {
 
         while (isMathOperation(excerpt)) {
             int indexFirst = -1;
-            int openBracket = -1;
             int closeBrackets = -1;
             int step = 0;
+            String operation = "";
 
-            for (int i = 0; i < excerpt.length(); i++) {
-                char current = excerpt.charAt(i);
-                if (current == 'l' || current == 's' || current == 'c' || current == 'a'
-                        || current == 't' || current == 'e' || current == 'f') {
-                    indexFirst = i;
-                    break;
+            for (String func : SUPPORTED_FUNCTIONS) {
+                int index = excerpt.indexOf(func + "(");
+                if (index != -1 && (indexFirst == -1 || index < indexFirst)) {
+                    indexFirst = index;
+                    operation = func;
                 }
             }
 
-            for (int i = indexFirst; i < excerpt.length(); i++) {
-                char current = excerpt.charAt(i);
-                if (current == '(') {
-                    openBracket = i;
-                    for (int j = openBracket + 1; j < excerpt.length(); j++) {
-                        char currentReverse = excerpt.charAt(j);
-                        if (currentReverse == '(') {
-                            step++;
-                        } else if (currentReverse == ')') {
-                            if (step > 0)
-                                step--;
-                            else {
-                                closeBrackets = j;
-                                break;
-                            }
-                        }
+            int openBracket = indexFirst + operation.length();
+
+            for (int i = openBracket + 1; i < excerpt.length(); i++) {
+                char currentReverse = excerpt.charAt(i);
+                if (currentReverse == '(') {
+                    step++;
+                } else if (currentReverse == ')') {
+                    if (step > 0)
+                        step--;
+                    else {
+                        closeBrackets = i;
+                        break;
                     }
-                    break;
                 }
             }
 
-            String operation = excerpt.substring(indexFirst, openBracket);
-            String variables =  excerpt.substring(openBracket + 1, closeBrackets);
+
+            String variables = excerpt.substring(openBracket + 1, closeBrackets);
             double number = convertVariables(variables);
 
             if (number < 0 && (operation.equals("log") || operation.equals("log10") || operation.equals("sqrt")))
@@ -186,28 +185,11 @@ public class Calculator implements ICalculate {
     }
 
     private String convertMathConstant(String excerpt) {
-        if (excerpt.contains("pi")) {
-            int index = excerpt.indexOf("pi");
-            if (index + 2 >= excerpt.length() || excerpt.charAt(index + 2) == ' ' || excerpt.charAt(index + 2) == ')') {
-                excerpt = excerpt.substring(0, index) + Math.PI + excerpt.substring(index + 2);
-            } else
-                throw new IllegalArgumentException("Does not math constant!");
 
-        } else if (excerpt.contains("e")) {
-            int index = excerpt.indexOf("e");
-            if (isOnlyE(index, excerpt) || excerpt.equals("e")) {
-                if (index + 1 >= excerpt.length() || excerpt.charAt(index + 1) == ' ' || excerpt.charAt(index + 1) == ')') {
-                    excerpt = excerpt.substring(0, index) + Math.E + excerpt.substring(index + 1);
-                } else
-                    throw new IllegalArgumentException("Does not math constant!");
-            }
-        }
+        excerpt = excerpt.replaceAll("pi", String.valueOf(Math.PI));
+        excerpt = excerpt.replaceAll("(?<!\\d)e(?!\\d)", String.valueOf(Math.E));
 
         return excerpt;
-    }
-
-    private boolean isOnlyE(int index, String excerpt) {
-        return index-1 > 0 && index+1 < excerpt.length() && excerpt.charAt(index+1) == ' ' && excerpt.charAt(index-1) == ' ';
     }
 
     private ArrayList<Object> convertObjects(ArrayList<Object> term) {

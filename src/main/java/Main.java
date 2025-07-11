@@ -5,6 +5,10 @@ public class Main {
 
 //        comm.input("log = -2 ^ 2");
 //        comm.input("y = 1 + 1");
-        System.out.println(comm.input("-(2 ^ 3)"));
+//        comm.input("print()");
+//        comm.input("clear()");
+//        comm.input("print()");
+
+        System.out.println(comm.input("pi + pi + e + e"));
     }
 }

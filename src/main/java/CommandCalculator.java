@@ -1,15 +1,26 @@
-public class CommandCalculator{
+public class CommandCalculator {
 
     public double input(String excerpt) {
         excerpt = excerpt.trim().toLowerCase();
-        if (excerpt.contains("="))
+
+        if (isCommand(excerpt)) {
+            ApplyCommand applyCommand = new ApplyCommand();
+            switch (excerpt) {
+                case "print()" -> applyCommand.printList();
+                case "clear()" -> applyCommand.clearList();
+            }
+        } else if (excerpt.contains("=")) {
             variables(excerpt);
-        else {
+        } else {
             Calculator calc = new Calculator();
             return calc.input(excerpt);
         }
 
         return 0;
+    }
+
+    private boolean isCommand(String excerpt) {
+        return excerpt.equals("print()") || excerpt.equals("clear()");
     }
 
     private void variables(String excerpt) {
