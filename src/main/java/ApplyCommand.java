@@ -2,16 +2,19 @@ import java.util.HashMap;
 
 public class ApplyCommand {
 
-    public void printList() {
+    public String printList() {
         CalcVariables comm = new CalcVariables();
         HashMap<String, Double> listVariables = comm.getListVariables();
+        StringBuilder stringBuild = new StringBuilder();
         for (String key : listVariables.keySet())
-            System.out.println(key + " = " + listVariables.get(key));
+            stringBuild.append(key).append(" = ").append(listVariables.get(key)).append("\n");
+
+        return stringBuild.toString();
     }
 
-    public void clearList() {
+    public String clearList() {
         CalcVariables comm = new CalcVariables();
         comm.clearList();
-        System.out.println("Clear successfully!");
+        return "Clear successes";
     }
 }

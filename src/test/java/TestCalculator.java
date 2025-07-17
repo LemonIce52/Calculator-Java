@@ -17,10 +17,9 @@ public class TestCalculator {
         assertEquals(1.0, calc.input("-2 + 3"), 0.0001);
         assertEquals(5.0, calc.input("   2    +    3   "), 0.0001);
         assertEquals(1.0, calc.input("   4  /  2 - 1   "), 0.0001);
-        assertThrows(IllegalArgumentException.class, () -> calc.input("+ 3 + 2"));
-        assertThrows(IllegalArgumentException.class, () -> calc.input("3 +2"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("3 + 2 -"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("3 _ 2"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input(" "));
     }
 
     @Test
@@ -38,7 +37,6 @@ public class TestCalculator {
         assertEquals(-1.0, calc.input("2 * -0.5"), 0.0001);
         assertEquals(6.0, calc.input("\t2\t*\t3\t"), 0.0001);
         assertThrows(IllegalArgumentException.class, () -> calc.input("* 3 / 2"));
-        assertThrows(IllegalArgumentException.class, () -> calc.input("3 *2"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("3 * 2 /"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("3 | 2"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("3 / 0"));
@@ -57,6 +55,7 @@ public class TestCalculator {
         assertEquals(2.0, calc.input("2 * 3 - 4 / 2 * 2"), 0.0001);
         assertThrows(IllegalArgumentException.class, () -> calc.input("9 / 0 + 1"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("2 * 3 / 0 * 2"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("2 * 3 & 0 * 2"));
     }
 
     @Test
@@ -71,7 +70,6 @@ public class TestCalculator {
         assertThrows(IllegalArgumentException.class, () -> calc.input("3 + 2)"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("()"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("( )"));
-        assertThrows(IllegalArgumentException.class, () -> calc.input("(3 3)"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("1 + (2 +)"));
     }
 
@@ -104,6 +102,9 @@ public class TestCalculator {
         CommandCalculator calc = new CommandCalculator();
         assertEquals(6.0, calc.input("2 + 3 * (4 - 2) - 2"));
         assertEquals(3.0, calc.input("(3 + 3) / (2 + 0)"));
+        assertEquals(-2.0, calc.input("-(1 + 1)"));
+        assertEquals(-2.0, calc.input("-(-1 - 1)"));
+        assertEquals(2.0, calc.input("+(-1 - 1)"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("(2 + 3"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("2 + 3)"));
     }
@@ -155,27 +156,54 @@ public class TestCalculator {
     public void testPower() {
         assertEquals(8.0, calc.input("2 ^ 3"), 1e-9);
         assertEquals(16.0, calc.input("(-2) ^ 4"), 1e-9);
-        assertEquals(-4.0, calc.input("-2 ^ 2"), 1e-9);  // важно: унарный минус перед возведением
+        assertEquals(-4.0, calc.input("-2 ^ 2"), 1e-9);
     }
 
     @Test
     public void testFunctions() {
         assertEquals(Math.sin(Math.PI / 2), calc.input("sin( pi / 2 )"), 1e-9);
         assertEquals(Math.log(10), calc.input("log( 10 )"), 1e-9);
+        assertEquals(Math.log10(10), calc.input("log10( 10 )"), 1e-9);
+        assertEquals(Math.tan(10), calc.input("tan( 10 )"), 1e-9);
         assertEquals(Math.sqrt(25), calc.input("sqrt( 25 )"), 1e-9);
         assertEquals(Math.exp(1), calc.input("exp( 1 )"), 1e-9);
+        assertEquals(Math.sin(Math.cos(0)), calc.input("sin( cos( 0 ) )"), 1e-9);
+        assertEquals(Math.sqrt(Math.abs(-9)), calc.input("sqrt( abs( -9 ) )"), 1e-9);
+        assertEquals(8.0, calc.input("pow( 2 , 3 )"), 1e-9);
+        assertEquals(5.0, calc.input("max( 2 , 5 )"), 1e-9);
+        assertEquals(2.0, calc.input("min( 2 , 5 )"), 1e-9);
+        assertEquals(4.0, calc.input("pow( 2 , min( 3 , 2 ) )"), 1e-9);
+        assertEquals(8.0, calc.input("pow( 2 , 3 )"), 1e-9);
+        assertEquals(3.0, calc.input("max( 1 , 3 )"), 1e-9);
+        assertEquals(1.0, calc.input("min( 1 , 3 )"), 1e-9);
+        assertEquals(100.0, calc.input("pow( 10 , 2 )"), 1e-9);
+        assertEquals(2.0, calc.input("pow( min( 2 , 3 ) , 1 )"), 1e-9);
+        assertEquals(5.0, calc.input("max( sin( pi / 2 ) , 5 )"), 1e-9);
+        assertThrows(IllegalArgumentException.class, () -> calc.input("log(-1)"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("log10(-25)"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("sqrt(-81)"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("max(,)"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("max(1, 2, 4)"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("max()"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("test(9)"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("sqrt(9, 25)"));
     }
 
     @Test
     public void testComplexExpression() {
         assertEquals(8.0, calc.input("2 + 3 * 2"), 1e-9);
         assertEquals(10.0, calc.input("( 2 + 3 ) * 2"), 1e-9);
+        assertThrows(IllegalArgumentException.class, () -> calc.input(")2 + 2("));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("(2 + 2"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("2 + 2)"));
     }
 
     @Test
     public void testNegativePowerBase() {
         assertEquals(16.0, calc.input("(-2) ^ 4"), 1e-9);
         assertEquals(-8.0, calc.input("-(2 ^ 3)"), 1e-9);
+        assertEquals(-16.0, calc.input("-2 ^ 2 ^ 2"), 1e-9);
+        assertEquals(-2.0, calc.input("-2 ^ 2 + 2"), 1e-9);
     }
 
     @Test
@@ -206,9 +234,35 @@ public class TestCalculator {
     // Дополнительно можешь протестировать ошибки:
      @Test
      public void testInvalidSyntax() {
-         assertThrows(IllegalArgumentException.class, () -> calc.input("2++2"));
          assertThrows(IllegalArgumentException.class, () -> calc.input("5//2"));
          assertThrows(IllegalArgumentException.class, () -> calc.input("5^^2"));
      }
+
+     @Test
+     public void testCommands() {
+        assertEquals(0, calc.input("p = 1 + 1"));
+        assertEquals(3.0, calc.input("p + 1"));
+        assertEquals(0, calc.input("print()"));
+        assertEquals(0, calc.input("clear()"));
+         assertThrows(IllegalArgumentException.class, () -> calc.input("print("));
+         assertThrows(IllegalArgumentException.class, () -> calc.input("clear"));
+         assertThrows(IllegalArgumentException.class, () -> calc.input("print"));
+         assertThrows(IllegalArgumentException.class, () -> calc.input("clear(("));
+         assertThrows(IllegalArgumentException.class, () -> calc.input("print)("));
+         assertThrows(IllegalArgumentException.class, () -> calc.input("clear(909)"));
+         assertThrows(IllegalArgumentException.class, () -> calc.input("test"));
+     }
+
+    @Test
+    public void testVariables() {
+        calc.input("x = 1");
+        calc.input("y = 2 + 2");
+        assertThrows(IllegalArgumentException.class, () -> calc.input("123 = 1"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("1 + 2 = 3"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("1 = 1"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("= 2 + 1"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("h i = 1"));
+        assertThrows(IllegalArgumentException.class, () -> calc.input("() = 2"));
+    }
 
 }
