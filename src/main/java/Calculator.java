@@ -6,16 +6,28 @@ import java.util.regex.Pattern;
 
 /**
 * {@link Calculator} this class implements string processing and performs mathematical calculations. It has functions such as
-* log(double x), log10(double x), sin(double x), cos(double x), sqrt(double x),
-* abs(double x), floor(double x), ceil(double x), exp(double x), tan(double x),
-* pow(double x, double y), min(double x, double y), max(double x, double y)
+ * <ul>
+ *     <li>log(double x >= 0)</li>
+ *     <li>log10(double x >= 0)</li>
+ *     <li>sin(double x)</li>
+ *     <li>cos(double x)</li>
+ *     <li>sqrt(double x > 0)</li>
+ *     <li>abs(double x)</li>
+ *     <li>floor(double x)</li>
+ *     <li>ceil(double x)</li>
+ *     <li>exp(double x)</li>
+ *     <li>tan(double x)</li>
+ *     <li>pow(double x, double y)</li>
+ *     <li>min(double x, double y)</li>
+ *     <li>max(double x, double y)</li>
+ * </ul>
 * as well as:
  * <ul>
-*  <li>"+" - addition,</li>
-*  <li>"-" - subtraction,</li>
-*  <li>"*" - multiply,</li>
-*  <li>"/"- divide,</li>
-*  <li>"^" - raise to a power</li>
+    *  <li>"+" - addition,</li>
+    *  <li>"-" - subtraction,</li>
+    *  <li>"*" - multiply,</li>
+    *  <li>"/"- divide,</li>
+    *  <li>"^" - raise to a power</li>
  * </ul>
 * calculations are performed in a clear sequence of priorities, expressions in
 * brackets and unary +/- are also supported
@@ -35,6 +47,9 @@ public final class Calculator {
     private final Set<String> _mathOperation = Set.of(
             "*", "/", "+", "-", "^"
     );
+
+    private final Pattern _unaryOperatorPattern = Pattern.compile("-((\\d+\\.\\d*)|(\\.\\d+)|(\\d+))([eE][+-]?\\d+)?(\\^((\\d+\\.\\d*)|(\\.\\d+)|(\\d+))([eE][+-]?\\d+)?)+");
+    private final Pattern _tokenizePattern =  Pattern.compile("(((\\d+\\.\\d*)|(\\.\\d+)|(\\d+))([eE][+-]?\\d+)?)|(\\b[a-z]+\\b)|.");
 
     /**
      * <p>This method accepts a string with an expression and performs calculations
@@ -74,9 +89,9 @@ public final class Calculator {
         return calculatingTheResult(term);
     }
 
+    // makes unary precedence explicit for further processing
     private String normalizeUnaryMinusInPowers(String excerpt) {
-        Pattern pattern = Pattern.compile("-((\\d+\\.\\d*)|(\\.\\d+)|(\\d+))([eE][+-]?\\d+)?(\\^((\\d+\\.\\d*)|(\\.\\d+)|(\\d+))([eE][+-]?\\d+)?)+");
-        Matcher matcher = pattern.matcher(excerpt);
+        Matcher matcher = _unaryOperatorPattern.matcher(excerpt);
 
         while (matcher.find())
             excerpt = excerpt.substring(0, matcher.start()+1) + "(" + excerpt.substring(matcher.start()+1, matcher.end()) + ")" + excerpt.substring(matcher.end());
@@ -84,6 +99,19 @@ public final class Calculator {
 
         return excerpt;
     }
+
+    /**
+     * <p>this method splits a string into tokens of the type "sign" - "number",
+     * before splitting some calculations are performed,
+     * i.e. processing of mathematical functions, constants, variables if any,
+     * and also opening brackets, further calculations are performed with a "pure" expression of the type "2+2*3/1^4".</p>
+     *
+     * @throws IllegalArgumentException if the number of opening and closing parentheses does not match
+     * @throws IllegalArgumentException if the opening parenthesis is before the closing one
+     * @throws IllegalArgumentException if a negative value is passed to a mathematical function (log, log10, sqrt)
+     * @throws IllegalArgumentException if no arguments are passed to a mathematical function
+     * @throws IllegalArgumentException if a mathematical function has more or less arguments than the function requires
+     * */
 
     private ArrayList<Object> tokenises(String excerpt) {
         if ((excerpt.contains("(") && !excerpt.contains(")")) || (!excerpt.contains("(") && excerpt.contains(")")))
@@ -93,16 +121,19 @@ public final class Calculator {
             int openBrackets = symbols.stream().filter(str -> str.equals("(")).toList().size();
             int closeBrackets = symbols.stream().filter(str -> str.equals(")")).toList().size();
 
+            int[] indexBrackets = indexBrackets(excerpt);
+
             if (openBrackets != closeBrackets)
                 throw new IllegalArgumentException("Invalid format");
+
+            if (indexBrackets[0] > indexBrackets[1])
+                throw new IllegalArgumentException("Invalid Format!");
         }
 
         excerpt = mathOperation(excerpt);
 
         ArrayList<Object> term = new ArrayList<>();
-        String regex = "(((\\d+\\.\\d*)|(\\.\\d+)|(\\d+))([eE][+-]?\\d+)?)|(\\b[a-z]+\\b)|.";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(excerpt);
+        Matcher matcher = _tokenizePattern.matcher(excerpt);
 
         while (matcher.find())
             term.add(excerpt.substring(matcher.start(), matcher.end()));
@@ -110,12 +141,11 @@ public final class Calculator {
         return term;
     }
 
+    //processes mathematical functions that are described in the class documentation
     private String mathOperation(String excerpt) {
 
         while (isMathOperation(excerpt)) {
             int indexFirst = -1;
-            int closeBrackets = -1;
-            int step = 0;
             String operation = "";
 
             for (String func : _mathFunctions) {
@@ -128,42 +158,14 @@ public final class Calculator {
             }
 
             int openBracket = indexFirst + operation.length();
-
-            for (int i = openBracket + 1; i < excerpt.length(); i++) {
-                char currentReverse = excerpt.charAt(i);
-                if (currentReverse == '(') {
-                    step++;
-                } else if (currentReverse == ')') {
-                    if (step > 0)
-                        step--;
-                    else {
-                        closeBrackets = i;
-                        break;
-                    }
-                }
-            }
+            int closeBrackets = indexCloseBracketMathFunction(excerpt, openBracket);
 
             String arguments = excerpt.substring(openBracket + 1, closeBrackets);
 
             if (isMathOperation(arguments))
                 arguments = mathOperation(arguments);
 
-            double[] variables = Arrays.stream(arguments.split(","))
-                    .mapToDouble(this::convertVariables)
-                    .toArray();
-
-            if (variables.length < 1)
-                throw new IllegalArgumentException("Math method accepts only one or two arguments!");
-
-            if (variables[0] < 0 && (operation.equals("log") || operation.equals("log10") || operation.equals("sqrt")))
-                throw new IllegalArgumentException("Math method does not supported number less that zero!");
-
-            double result;
-
-            if (variables.length == 2)
-                result = applyMathOperatorTooArguments(operation, variables);
-            else
-                result = applyMathOperator(operation, variables[0]);
+            double result = applyMathFunction(operation, arguments);
 
             excerpt = excerpt.substring(0, indexFirst) + result + excerpt.substring(closeBrackets + 1);
         }
@@ -171,10 +173,56 @@ public final class Calculator {
         return convertMathConstant(excerpt);
     }
 
+    // finds the indices of the opening and closing parentheses of a mathematical function
+    private int indexCloseBracketMathFunction(String excerpt, int openBracket) {
+        int closeBrackets = -1;
+        int step = 0;
+
+        for (int i = openBracket + 1; i < excerpt.length(); i++) {
+            char currentReverse = excerpt.charAt(i);
+            if (currentReverse == '(') {
+                step++;
+            } else if (currentReverse == ')') {
+                if (step > 0)
+                    step--;
+                else {
+                    closeBrackets = i;
+                    break;
+                }
+            }
+        }
+
+        return closeBrackets;
+    }
+
+    //the arguments of a mathematical function are broken down and applied, the method returns the solution result
+    private double applyMathFunction(String operation, String arguments) {
+        double[] variables = Arrays.stream(arguments.split(","))
+                .mapToDouble(this::convertVariables)
+                .toArray();
+
+        if (variables.length < 1)
+            throw new IllegalArgumentException("Math method accepts only one or two arguments!");
+
+        if (variables[0] < 0 && (operation.equals("log") || operation.equals("log10") || operation.equals("sqrt")))
+            throw new IllegalArgumentException("Math method does not supported number less that zero!");
+
+        double result;
+
+        if (variables.length == 2)
+            result = applyMathOperatorTooArguments(operation, variables);
+        else
+            result = applyMathOperator(operation, variables[0]);
+
+        return result;
+    }
+
     private boolean isMathOperation(String str) {
         return _mathFunctions.stream().anyMatch(func -> str.contains(func + "("));
     }
 
+    //converts a string into a double number, if you pass an expression,
+    // then in case of a parsing error, a recursion occurs where the expression is passed
     private double convertVariables(String variables) {
         double result;
         try {
@@ -185,6 +233,7 @@ public final class Calculator {
         return result;
     }
 
+    //replaces the verbal representation of mathematical constants with a digital representation
     private String convertMathConstant(String excerpt) {
 
         excerpt = excerpt.replaceAll("(?<!\\d)pi(?!\\d)", String.valueOf(Math.PI));
@@ -195,51 +244,54 @@ public final class Calculator {
 
     private String openBrackets(String excerpt) {
         while (excerpt.contains("(") && excerpt.contains(")")) {
-            int indexFirst = excerpt.indexOf('(') + 1;
-            int indexLast = 0;
 
-            for (int i = indexFirst; i < excerpt.length(); i++) {
-                if (excerpt.charAt(i) == '(')
-                    indexFirst = i + 1;
-                if (excerpt.charAt(i) == ')') {
-                    indexLast = i;
-                    break;
-                }
-            }
-
-            if (indexFirst > indexLast)
-                throw new IllegalArgumentException("Invalid Format!");
-
-            String newExcerpt = excerpt.substring(indexFirst, indexLast);
-
-            double result = convertVariables(newExcerpt);
-
-            String endExcerpt = excerpt.substring(indexLast + 1);
-            int step = 1;
-
-            for (int i = indexFirst; i >= 0; i--) {
-                if (excerpt.charAt(i) == ' ') {
-                    step = i + 1;
-                    break;
-                } else if (excerpt.charAt(i) == '(') {
-                    break;
-                }
-            }
-
-            if (indexFirst - 2 >= 0 && result < 0) {
-                excerpt = (switch (excerpt.charAt(indexFirst - step)) {
-                    case '-' -> excerpt.substring(0, indexFirst - step) + result + endExcerpt;
-                    case '+' -> excerpt.substring(0, indexFirst - step) + (result * -1.0) + endExcerpt;
-                    default -> excerpt.substring(0, indexFirst - 1) + result + endExcerpt;
-                }).trim();
-            } else
-                excerpt = (excerpt.substring(0, indexFirst - 1) + result + endExcerpt).trim();
+            int[] indexBrackets = indexBrackets(excerpt);
+            excerpt = replaceBrackets(excerpt, indexBrackets);
         }
 
         return excerpt;
     }
 
+    // finds the opening and closing parenthesis,
+    // if there is no opening parenthesis then 0 will be processed in the loop and not -1
+    private int[] indexBrackets(String excerpt) {
+        int indexFirst = excerpt.indexOf('(');
+        int indexLast = 0;
 
+        for (int i = indexFirst + 1; i < excerpt.length(); i++) {
+            if (excerpt.charAt(i) == '(')
+                indexFirst = i;
+            if (excerpt.charAt(i) == ')') {
+                indexLast = i;
+                break;
+            }
+        }
+
+        return new int[]{indexFirst, indexLast};
+    }
+
+    //replaces the parentheses expression with the calculated result, unary plus and minus are also handled
+    private String replaceBrackets(String excerpt, int[] indexBrackets) {
+        String startExcerpt = excerpt.substring(0, indexBrackets[0]);
+        String expression = excerpt.substring(indexBrackets[0] + 1, indexBrackets[1]);
+        String endExcerpt = excerpt.substring(indexBrackets[1] + 1);
+
+        double result = convertVariables(expression);
+        int reverseStepDigitOrOperator = 2;
+
+        if (indexBrackets[0] - reverseStepDigitOrOperator >= 0 && result < 0) {
+            if (excerpt.charAt(indexBrackets[0] - 1) == '+' && !Character.isDigit(excerpt.charAt(indexBrackets[0] - reverseStepDigitOrOperator)))
+                excerpt = (startExcerpt + (result * -1.0) + endExcerpt).trim();
+            else
+                excerpt = (startExcerpt + result + endExcerpt).trim();
+
+        } else
+            excerpt = (startExcerpt + result + endExcerpt).trim();
+
+        return excerpt;
+    }
+
+    //performs a complete conversion of numbers into numbers, variables also into numbers if variables are present
     private ArrayList<Object> convertObjects(ArrayList<Object> term) {
         CalcVariables var = new CalcVariables();
 
@@ -260,41 +312,45 @@ public final class Calculator {
         return convertUnaryMinusOrPlus(term);
     }
 
+    //separate conversion and application of unary plus and minus
     private ArrayList<Object> convertUnaryMinusOrPlus(ArrayList<Object> term) {
         ArrayList<Object> newTerm = new ArrayList<>();
 
         for (int i = 0; i < term.size(); i++){
             String current = String.valueOf(term.get(i));
-            if (current.equals("-")){
-                if (i == 0 && i+1 < term.size() && term.get(i+1) instanceof Double)
-                    newTerm.add(Double.parseDouble(current + term.get(++i)));
-                else if (i == 0 && i+2 < term.size() && term.get(i+1) instanceof String op && op.equals("-")) {
-                    newTerm.add(Double.parseDouble(current + term.get(i += 2)));
+
+            switch (current) {
+                case "-" -> {
+                    if (i == 0 && i+1 < term.size() && term.get(i+1) instanceof Double)
+                        newTerm.add(Double.parseDouble(current + term.get(++i)));
+                    else if (i == 0 && i+2 < term.size() && term.get(i+1) instanceof String op && op.equals("-"))
+                        newTerm.add(Double.parseDouble(current + term.get(i += 2)));
+                    else if (term.get(i-1) instanceof Double && i+1 < term.size() && term.get(i+1) instanceof Double)
+                        newTerm.add(current);
+                    else if (term.get(i-1) instanceof String && i + 1 < term.size() && term.get(i + 1) instanceof Double)
+                        newTerm.add(Double.parseDouble(current + term.get(++i)));
+                    else
+                        newTerm.add(current);
                 }
-                else if (term.get(i-1) instanceof Double && i+1 < term.size() && term.get(i+1) instanceof Double)
-                    newTerm.add(current);
-                else if (term.get(i-1) instanceof String && i + 1 < term.size() && term.get(i + 1) instanceof Double)
-                    newTerm.add(Double.parseDouble(current + term.get(++i)));
-                else
-                    newTerm.add(current);
-            } else if (current.equals("+")) {
-                if (i == 0 && i+1 < term.size() && term.get(i+1) instanceof Double)
-                    newTerm.add(Math.abs((double) term.get(++i)));
-                else if (i == 0 && i+2 < term.size() && term.get(i+1) instanceof String op && (op.equals("-") || op.equals("+"))) {
-                    newTerm.add(Math.abs((double) term.get(i += 2)));
+                case "+" -> {
+                    if (i == 0 && i+1 < term.size() && term.get(i+1) instanceof Double)
+                        newTerm.add(Math.abs((double) term.get(++i)));
+                    else if (i == 0 && i+2 < term.size() && term.get(i+1) instanceof String op && (op.equals("-") || op.equals("+"))) {
+                        newTerm.add(Math.abs((double) term.get(i += 2)));
+                    }
+                    else if (term.get(i-1) instanceof Double && i+1 < term.size() && term.get(i+1) instanceof Double)
+                        newTerm.add(current);
+                    else if (term.get(i-1) instanceof String && i + 1 < term.size() && term.get(i + 1) instanceof Double)
+                        newTerm.add(Math.abs((double) term.get(++i)));
+                    else
+                        newTerm.add(current);
                 }
-                else if (term.get(i-1) instanceof Double && i+1 < term.size() && term.get(i+1) instanceof Double)
-                    newTerm.add(current);
-                else if (term.get(i-1) instanceof String && i + 1 < term.size() && term.get(i + 1) instanceof Double)
-                    newTerm.add(Math.abs((double) term.get(++i)));
-                else
-                    newTerm.add(current);
-            }
-            else {
-                try {
-                    newTerm.add(Double.parseDouble(current));
-                } catch (NumberFormatException e) {
-                    newTerm.add(current);
+                default -> {
+                    try {
+                        newTerm.add(Double.parseDouble(current));
+                    } catch (NumberFormatException e) {
+                        newTerm.add(current);
+                    }
                 }
             }
         }
@@ -302,6 +358,7 @@ public final class Calculator {
         return newTerm;
     }
 
+    //checks the "purity" of the expression after processing
     private boolean validTokens(ArrayList<Object> term) {
         if (term.isEmpty()) return false;
         if (term.getFirst() instanceof String || term.getLast() instanceof String) return false;
@@ -326,6 +383,7 @@ public final class Calculator {
         return _mathOperation.stream().anyMatch(str -> str.equals(op));
     }
 
+    //performs calculations with the highest precedence operators (*, /, ^)
     private ArrayList<Object> topOperator(ArrayList<Object> term) {
 
         ArrayList<Object> changedTerm = raisingToPower(term);
@@ -347,6 +405,7 @@ public final class Calculator {
         return newTerm;
     }
 
+    //performs exponentiation taking into account the rules from right to left
     private ArrayList<Object> raisingToPower(ArrayList<Object> term) {
 
         for (int i = term.size() - 1; i >= 0; i--) {
@@ -364,6 +423,7 @@ public final class Calculator {
         return term;
     }
 
+    //performs calculations of low-priority operators (+, -)
     private double calculatingTheResult(ArrayList<Object> term) {
         if (term.size() == 1 && term.getFirst() instanceof Double num)
             return num;

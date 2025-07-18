@@ -78,6 +78,8 @@ public final class CommandCalculator {
         return excerpt.equals("print()") || excerpt.equals("clear()");
     }
 
+    //processes the variable by splitting it by the = sign
+    // if an expression was assigned to the variable it will first be solved and then assigned to the variable
     private void variables(String excerpt) {
         CalcVariables var = new CalcVariables();
         double result;
