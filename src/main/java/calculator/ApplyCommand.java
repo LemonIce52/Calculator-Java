@@ -1,9 +1,11 @@
+package calculator;
+
 import java.util.HashMap;
 
 /**
  * This class provides command execution and returns the result as a string.
  * <blockquote><pre>
- *     ApplyCommand comm = new ApplyCommand();
+ *     calculator.ApplyCommand comm = new calculator.ApplyCommand();
  *     comm.printList(); //return list variables in type String
  *     comm.clearList(); //return "Clear successes" and clear list variables
  * </blockquote></pre>

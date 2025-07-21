@@ -1,3 +1,5 @@
+package calculator;
+
 import java.util.HashMap;
 
 /**
@@ -5,7 +7,7 @@ import java.util.HashMap;
  * actions related to commands or receiving variables
  *
  * <blockquote><pre>
- *     CalcVariables var = new CalcVariables();
+ *     calculator.CalcVariables var = new calculator.CalcVariables();
  *     var.setVariables("x", 2); //set variables
  *     var.getVariables("x"); // return 2
  *     var.getVariables("y"); // return NaN because there is no variable with such a name

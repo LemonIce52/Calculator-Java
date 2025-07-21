@@ -15,6 +15,7 @@ public class TestCalculator {
         assertEquals(0.0, calc.input("0 + 0"), 0.0001);
         assertEquals(-5.0, calc.input("-2 - 3"), 0.0001);
         assertEquals(1.0, calc.input("-2 + 3"), 0.0001);
+        assertEquals(5.0, calc.input("+2 + 3"), 0.0001);
         assertEquals(5.0, calc.input("   2    +    3   "), 0.0001);
         assertEquals(1.0, calc.input("   4  /  2 - 1   "), 0.0001);
         assertThrows(IllegalArgumentException.class, () -> calc.input("3 + 2 -"));

@@ -1,3 +1,7 @@
+import calculator.ApplyCommand;
+import calculator.CalcVariables;
+import calculator.Calculator;
+
 /**
  *<p>
  * {@link CommandCalculator} this class determines whether you pass a command,
