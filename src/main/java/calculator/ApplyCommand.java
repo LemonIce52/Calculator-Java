@@ -10,7 +10,7 @@ import java.util.HashMap;
  *     comm.clearList(); //return "Clear successes" and clear list variables
  * </blockquote></pre>
  * */
-public class ApplyCommand {
+class ApplyCommand {
 
     public String printList() {
         CalcVariables comm = new CalcVariables();

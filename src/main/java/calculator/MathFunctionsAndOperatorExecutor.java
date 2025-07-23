@@ -1,6 +1,8 @@
 package calculator;
 
-public class MathFunctionsAndOperatorExecutor {
+final class MathFunctionsAndOperatorExecutor {
+
+    private MathFunctionsAndOperatorExecutor() {}
 
     public static double applyMathOperator(String op, double number) {
         return switch (op) {

@@ -37,11 +37,7 @@ import java.util.Set;
  *     System.out.println(calc.input("(-2) ^ 2")); // return 4
  *</blockquote></pre>
 **/
-public final class Calculator {
-
-    private final Set<String> MATH_OPERATORS = Set.of(
-            "*", "/", "+", "-", "^"
-    );
+final class Calculator implements ExpressionParser {
 
     /**
      * <p>This method accepts a string with an expression and performs calculations
@@ -63,26 +59,35 @@ public final class Calculator {
      * (if 2 numbers go in a row they are perceived as a single number)
      * **/
 
-    public double input(String excerpt) {
+    @Override
+    public double parseAndCalculate(String excerpt) {
         if (excerpt.isEmpty() || excerpt.equals(" "))
             throw new IllegalArgumentException("Invalid format excerpt!");
 
-        Tokenize tokenize = new Tokenize();
-        MathFunctionsParser applyHeavyMath = new MathFunctionsParser();
-        excerpt = excerpt.trim().toLowerCase().replaceAll("[ \t\n]", "");
-        excerpt = applyHeavyMath.applyMathFunctions(excerpt);
-        ArrayList<Object> term = tokenize.tokenises(excerpt);
+        ArrayList<Object> term = tokenizeAndTransform(excerpt);
 
         if (!validTokens(term))
             throw new IllegalArgumentException("Invalid format excerpt!");
 
-        term = topOperator(term);
-
         return calculatingTheResult(term);
     }
 
+    private ArrayList<Object> tokenizeAndTransform(String excerpt) {
+        Tokenize tokenize = new Tokenize();
+        FunctionResolver applyHeavyMath = new FunctionResolver();
+
+        excerpt = applyHeavyMath.applyMathFunctions(excerpt);
+
+        return tokenize.tokenises(excerpt);
+    }
+
+    private boolean isMathFunctions(String excerpt) {
+        return Constants.MATH_FUNCTIONS.stream().anyMatch(excerpt::contains);
+    }
+
     //checks the "purity" of the expression after processing
-    private boolean validTokens(ArrayList<Object> term) {
+    @Override
+    public boolean validTokens(ArrayList<Object> term) {
         if (term.isEmpty()) return false;
         if (term.getFirst() instanceof String || term.getLast() instanceof String) return false;
 
@@ -103,7 +108,26 @@ public final class Calculator {
     }
 
     private boolean isOperator(String op) {
-        return MATH_OPERATORS.stream().anyMatch(str -> str.equals(op));
+        return Constants.MATH_OPERATORS.stream().anyMatch(str -> str.equals(op));
+    }
+
+    //performs calculations of low-priority operators (+, -)
+    @Override
+    public double calculatingTheResult(ArrayList<Object> term) {
+        if (term.size() == 1 && term.getFirst() instanceof Double num)
+            return num;
+
+        term = topOperator(term);
+
+        double result = Double.parseDouble(String.valueOf(term.getFirst()));
+
+        for (int i = 1; i < term.size(); i += 2) {
+            String op = (String) term.get(i);
+            double rightNumber = (double) term.get(i + 1);
+            result = MathFunctionsAndOperatorExecutor.applyOperator(op, result, rightNumber);
+        }
+
+        return result;
     }
 
     //performs calculations with the highest precedence operators (*, /, ^)
@@ -144,21 +168,5 @@ public final class Calculator {
         }
 
         return term;
-    }
-
-    //performs calculations of low-priority operators (+, -)
-    private double calculatingTheResult(ArrayList<Object> term) {
-        if (term.size() == 1 && term.getFirst() instanceof Double num)
-            return num;
-
-        double result = Double.parseDouble(String.valueOf(term.getFirst()));
-
-        for (int i = 1; i < term.size(); i += 2) {
-            String op = (String) term.get(i);
-            double rightNumber = (double) term.get(i + 1);
-            result = MathFunctionsAndOperatorExecutor.applyOperator(op, result, rightNumber);
-        }
-
-        return result;
     }
 }

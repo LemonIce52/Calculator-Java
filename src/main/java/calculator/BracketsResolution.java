@@ -2,8 +2,10 @@ package calculator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public class BracketsResolution {
+class BracketsResolution {
 
     public String openBrackets(String excerpt) {
 
@@ -31,7 +33,7 @@ public class BracketsResolution {
             if (openBrackets != closeBrackets)
                 throw new IllegalArgumentException("Invalid format");
 
-            if (indexBrackets[0] > indexBrackets[1])
+            if (indexBrackets[1] < indexBrackets[0])
                 throw new IllegalArgumentException("Invalid Format!");
         }
     }
@@ -39,6 +41,7 @@ public class BracketsResolution {
     // finds the opening and closing parenthesis,
     // if there is no opening parenthesis then 0 will be processed in the loop and not -1
     private int[] indexBrackets(String excerpt) {
+
         int indexFirst = excerpt.indexOf('(');
         int indexLast = 0;
 
@@ -60,7 +63,7 @@ public class BracketsResolution {
         String expression = excerpt.substring(indexBrackets[0] + 1, indexBrackets[1]);
         String endExcerpt = excerpt.substring(indexBrackets[1] + 1);
 
-        double result = ConvertObjects.convertVariables(expression);
+        double result = TokenConvert.convertVariables(expression);
         int reverseStepDigitOrOperator = 2;
 
         if (indexBrackets[0] - reverseStepDigitOrOperator >= 0 && result < 0) {

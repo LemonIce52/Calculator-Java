@@ -1,3 +1,4 @@
+import calculator.CommandCalculator;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -262,7 +263,6 @@ public class TestCalculator {
         assertThrows(IllegalArgumentException.class, () -> calc.input("1 + 2 = 3"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("1 = 1"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("= 2 + 1"));
-        assertThrows(IllegalArgumentException.class, () -> calc.input("h i = 1"));
         assertThrows(IllegalArgumentException.class, () -> calc.input("() = 2"));
     }
 

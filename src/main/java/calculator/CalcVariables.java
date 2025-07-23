@@ -16,7 +16,7 @@ import java.util.HashMap;
  *     var.getVariables("x"); //now it will return NaN because the list of variables was cleared
  * </blockquote></pre>
  * */
-public class CalcVariables{
+class CalcVariables{
 
     private final static HashMap<String, Double> _listVariables = new HashMap<>();
 

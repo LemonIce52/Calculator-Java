@@ -1,18 +1,10 @@
 package calculator;
 
 import java.util.Arrays;
-import java.util.Set;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
-public class MathFunctionsParser {
-
-    private final Set<String> MATH_FUNCTIONS = Set.of(
-            "log", "log10", "sin", "cos", "sqrt", "abs", "floor", "ceil", "exp", "tan", "pow", "min", "max"
-    );
-
-    private final Pattern UNARY_OOPERATOR_PATTERN = Pattern.compile("-((\\d+\\.\\d*)|(\\.\\d+)|(\\d+))([eE][+-]?\\d+)?(\\^((\\d+\\.\\d*)|(\\.\\d+)|(\\d+))([eE][+-]?\\d+)?)+");
+class FunctionResolver {
 
     public String applyMathFunctions(String excerpt) {
         return normalizeUnaryMinusInPowers(excerpt);
@@ -20,7 +12,7 @@ public class MathFunctionsParser {
 
     // makes unary precedence explicit for further processing
     private String normalizeUnaryMinusInPowers(String excerpt) {
-        Matcher matcher = UNARY_OOPERATOR_PATTERN.matcher(excerpt);
+        Matcher matcher = Constants.UNARY_OOPERATOR_PATTERN.matcher(excerpt);
 
         while (matcher.find())
             excerpt = excerpt.substring(0, matcher.start()+1) + "(" + excerpt.substring(matcher.start()+1, matcher.end()) + ")" + excerpt.substring(matcher.end());
@@ -36,7 +28,7 @@ public class MathFunctionsParser {
             int indexFirst = -1;
             String operation = "";
 
-            for (String func : MATH_FUNCTIONS) {
+            for (String func : Constants.MATH_FUNCTIONS) {
                 int index = excerpt.indexOf(func + "(");
                 if (index != -1) {
                     indexFirst = index;
@@ -62,7 +54,7 @@ public class MathFunctionsParser {
     }
 
     private boolean isMathOperation(String str) {
-        return MATH_FUNCTIONS.stream().anyMatch(func -> str.contains(func + "("));
+        return Constants.MATH_FUNCTIONS.stream().anyMatch(func -> str.contains(func + "("));
     }
 
     // finds the indices of the opening and closing parentheses of a mathematical function
@@ -90,7 +82,7 @@ public class MathFunctionsParser {
     //the arguments of a mathematical function are broken down and applied, the method returns the solution result
     private double applyMathFunction(String operation, String arguments) {
         double[] variables = Arrays.stream(arguments.split(","))
-                .mapToDouble(ConvertObjects::convertVariables)
+                .mapToDouble(TokenConvert::convertVariables)
                 .toArray();
 
         if (variables.length < 1)
@@ -114,8 +106,8 @@ public class MathFunctionsParser {
 
         BracketsResolution brackets = new BracketsResolution();
 
-        excerpt = excerpt.replaceAll("(?<!\\d)pi(?!\\d)", String.valueOf(Math.PI));
-        excerpt = excerpt.replaceAll("(?<!\\d)e(?!\\d)", String.valueOf(Math.E));
+        excerpt = excerpt.replaceAll("(?<![\\da-z])pi(?![\\da-z])", String.valueOf(Math.PI));
+        excerpt = excerpt.replaceAll("(?<![\\da-z])e(?![\\da-z])", String.valueOf(Math.E));
 
         return brackets.openBrackets(excerpt);
     }

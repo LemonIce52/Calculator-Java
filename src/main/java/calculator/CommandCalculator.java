@@ -1,6 +1,4 @@
-import calculator.ApplyCommand;
-import calculator.CalcVariables;
-import calculator.Calculator;
+package calculator;
 
 /**
  *<p>
@@ -21,7 +19,7 @@ import calculator.Calculator;
  * </p>
  *
  * <blockquote><pre>
- *     CommandCalculator calc = new CommandCalculator();
+ *     calculator.CommandCalculator calc = new calculator.CommandCalculator();
  *     System.out.println(calc.input("2 + 2")); // return 4
  *     System.out.println(calc.input("-2^2")); // return -4
  *     System.out.println(calc.input("(-2) ^ 2")); // return 4
@@ -59,7 +57,7 @@ public final class CommandCalculator {
      * (if 2 numbers go in a row they are perceived as a single number)
      * **/
     public double input(String excerpt) {
-        excerpt = excerpt.trim().toLowerCase();
+        excerpt = excerpt.trim().toLowerCase().replaceAll("[ \t\n]", "");
 
         if (isCommand(excerpt)) {
             ApplyCommand applyCommand = new ApplyCommand();
@@ -71,8 +69,7 @@ public final class CommandCalculator {
         } else if (excerpt.contains("=")) {
             variables(excerpt);
         } else {
-            Calculator calc = new Calculator();
-            return calc.input(excerpt);
+            return new Calculator().parseAndCalculate(excerpt);
         }
 
         return 0;
@@ -96,7 +93,7 @@ public final class CommandCalculator {
             result = Double.parseDouble(splitExcerpt[1]);
         } catch (NumberFormatException e) {
             Calculator calc = new Calculator();
-            result = calc.input(splitExcerpt[1]);
+            result = calc.parseAndCalculate(splitExcerpt[1]);
         }
 
         var.setVariables(splitExcerpt[0], result);

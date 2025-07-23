@@ -2,12 +2,8 @@ package calculator;
 
 import java.util.ArrayList;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-public class Tokenize {
-
-    private final Pattern TOKENIZE_PATTERN =  Pattern.compile("(((\\d+\\.\\d*)|(\\.\\d+)|(\\d+))([eE][+-]?\\d+)?)|(\\b[a-z]+\\b)|.");
-
+class Tokenize {
 
     /**
      * <p>this method splits a string into tokens of the type "sign" - "number",
@@ -22,15 +18,14 @@ public class Tokenize {
      * @throws IllegalArgumentException if a mathematical function has more or less arguments than the function requires
      * */
     public ArrayList<Object> tokenises(String excerpt) {
-
-        ConvertObjects convert = new ConvertObjects();
+        TokenConvert tokenConvert = new TokenConvert();
         ArrayList<Object> term = new ArrayList<>();
-        Matcher matcher = TOKENIZE_PATTERN.matcher(excerpt);
+        Matcher matcher = Constants.TOKEN_PATTERN.matcher(excerpt);
 
         while (matcher.find())
             term.add(excerpt.substring(matcher.start(), matcher.end()));
 
-        return convert.convertObjects(term);
+        return tokenConvert.convert(term);
     }
 
 }
